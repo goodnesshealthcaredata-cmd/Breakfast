@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <title>ChaatKart Pro | Advanced Sales Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            padding: 18px 16px 48px 16px;
+        }
+        .app-container { max-width: 650px; margin: 0 auto; position: relative; }
+        .card {
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 6px rgba(0,0,0,0.05);
+            padding: 18px 16px;
+            margin-bottom: 24px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .stat-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 14px 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid #eef2ff;
+        }
+        .stat-label { font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .stat-value { font-size: 28px; font-weight: 800; color: #1e293b; line-height: 1.2; }
+        .revenue-value { color: #16a34a; }
+        .pending-value { color: #f97316; }
+        .no-payment-value { color: #94a3b8; }
+        .date-badge { background: #eef2ff; padding: 6px 14px; border-radius: 40px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 8px; }
+        .filter-row { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+        .filter-input { flex: 1; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 40px; font-size: 14px; font-family: inherit; background: white; }
+        .filter-btn { background: #f97316; color: white; padding: 10px 18px; border-radius: 40px; font-weight: 500; font-size: 13px; border: none; cursor: pointer; transition: 0.2s; }
+        .filter-btn:hover { opacity: 0.9; }
+        .filter-btn-outline { background: white; border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 40px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .search-bar { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 40px; font-size: 14px; margin-bottom: 12px; }
+        .payment-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .payment-filter-btn { padding: 6px 12px; border-radius: 40px; font-size: 12px; background: #f1f5f9; cursor: pointer; transition: 0.1s; }
+        .payment-filter-btn.active { background: #f97316; color: white; }
+        .cart-item {
+            background: #f9fafb;
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #f97316;
+        }
+        .item-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .item-name { font-weight: 700; font-size: 16px; }
+        .price-edit-input { width: 70px; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 12px; text-align: center; }
+        .qty-controls { display: flex; align-items: center; gap: 12px; background: white; padding: 4px 12px; border-radius: 40px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .qty-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 40px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        .qty-btn:active { transform: scale(0.96); background: #e2e8f0; }
+        .grand-total { font-weight: 800; font-size: 18px; text-align: right; border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 8px; }
+        button { border: none; background: none; cursor: pointer; font-family: inherit; }
+        .btn-primary { background: #f97316; color: white; font-weight: 600; padding: 14px 18px; border-radius: 60px; width: 100%; font-size: 16px; transition: 0.2s; cursor: pointer; }
+        .btn-primary:active { transform: scale(0.97); background: #ea580c; }
+        .btn-outline { background: white; border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 40px; font-weight: 500; cursor: pointer; }
+        .menu-grid { display: flex; flex-direction: column; gap: 16px; }
+        .menu-grid.columns-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-grid.columns-2 .menu-card { margin: 0; }
+        .menu-grid.columns-2 .menu-info { padding: 10px; }
+        .menu-grid.columns-2 .menu-info strong { font-size: 0.95rem; }
+        .menu-grid.columns-2 .price-badge { font-size: 11px; padding: 3px 8px; }
+        .menu-grid.columns-2 .price-row { gap: 8px; margin: 4px 0; }
+        .menu-grid.columns-2 .btn-grid-2x2 { gap: 6px; margin-top: 8px; }
+        .menu-grid.columns-2 .btn-grid-2x2 .add-cart-btn { font-size: 10px; padding: 8px 4px; min-width: 0; }
+        .menu-grid.columns-2 .menu-img { aspect-ratio: 16 / 10; }
+        .menu-card { background: white; border-radius: 28px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+        .menu-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        .menu-img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: #f1f5f9; }
+        .menu-info { padding: 14px; }
+        .price-row { display: flex; gap: 16px; margin: 8px 0; font-weight: 500; flex-wrap: wrap; }
+        .price-badge { background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+        .stats-row { display: flex; justify-content: space-between; background: #f8fafc; padding: 8px 12px; border-radius: 20px; font-size: 13px; margin: 10px 0; flex-wrap: wrap; gap: 6px; }
+        .add-cart-btn { color: white; padding: 10px 12px; border-radius: 40px; font-weight: 600; font-size: 12px; cursor: pointer; border: none; transition: 0.1s; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 1; min-width: 85px; }
+        .add-cart-btn:active { transform: scale(0.96); opacity: 0.8; }
+        .btn-counter { background: #22c55e; }
+        .btn-counter:active { background: #16a34a; }
+        .btn-parcel { background: #3b82f6; }
+        .btn-parcel:active { background: #2563eb; }
+        .btn-grid-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .btn-grid-2x2 .add-cart-btn {
+            margin: 0;
+            min-width: 0;
+            padding: 12px 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .table-wrapper { overflow-x: auto; margin-top: 12px; border-radius: 20px; border: 1px solid #f1f5f9; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 580px; }
+        .data-table th { background: #f8fafc; padding: 12px 10px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; }
+        .data-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .action-btn { background: #f1f5f9; border-radius: 30px; padding: 6px 10px; margin: 0 3px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.1s; }
+        .delete-btn { background: #fee2e2; color: #b91c1c; }
+        .edit-btn { background: #e0f2fe; color: #0369a1; }
+        .section-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .toast { position: fixed; bottom: 25px; left: 20px; right: 20px; max-width: 400px; margin: 0 auto; background: #1e293b; color: white; padding: 12px 18px; border-radius: 60px; font-weight: 500; text-align: center; z-index: 1000; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .badge { background: #eef2ff; padding: 4px 10px; border-radius: 30px; font-size: 12px; }
+        i { margin-right: 4px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(4px); }
+        .modal-content { background: white; border-radius: 32px; padding: 24px; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 40px; font-size: 14px; }
+        .modal-buttons { display: flex; gap: 12px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 12px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.1s; }
+        .accordion-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+        .accordion-icon { transition: transform 0.3s ease; }
+        .accordion-icon.rotated { transform: rotate(180deg); }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .accordion-content.open { max-height: 800px; }
+        .mix-items-grid { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; max-height: 250px; overflow-y: auto; }
+        .mix-item-option { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+        .mix-item-option.selected { background: #fff7ed; border-color: #f97316; }
+        .mix-item-option input { margin: 0; width: 18px; height: 18px; cursor: pointer; }
+        .summary-list { background: #f8fafc; border-radius: 20px; padding: 12px; margin-top: 12px; }
+        .summary-item { font-size: 13px; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; display: flex; justify-content: space-between; }
+        .customer-input { margin: 12px 0; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 40px; width: 100%; font-family: inherit; }
+        .payment-options { display: flex; gap: 12px; margin: 12px 0; align-items: center; flex-wrap: wrap; }
+        .payment-option { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 16px; border-radius: 40px; background: #f1f5f9; transition: 0.1s; }
+        .payment-option input { margin: 0; width: 18px; height: 18px; cursor: pointer; }
+        .cart-order-card { border-radius: 20px; padding: 14px; margin-bottom: 12px; border-left: 4px solid #f97316; }
+        .cart-order-card.cash-bg { background: #e8f5e9; }
+        .cart-order-card.online-bg { background: #e3f2fd; }
+        .cart-order-card.pending-bg { background: #ffebee; }
+        .cart-order-card.nopayment-bg { background: #f5f5f5; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+        .page-btn { background: #f1f5f9; padding: 8px 16px; border-radius: 40px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .page-btn.active { background: #f97316; color: white; }
+        .page-nav-btn { background: #f1f5f9; padding: 8px 16px; border-radius: 40px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .tabs-container { display: flex; gap: 4px; margin-bottom: 20px; background: #f1f5f9; padding: 4px; border-radius: 60px; }
+        .tab-btn { flex: 1; padding: 12px 8px; background: transparent; border-radius: 40px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; text-align: center; color: #64748b; }
+        .tab-btn.active { background: #f97316; color: white; box-shadow: 0 2px 8px rgba(249,115,22,0.3); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .graph-container { margin-top: 24px; background: white; border-radius: 20px; padding: 16px; }
+        .graph-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1e293b; }
+        .month-picker { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .month-select, .year-select { padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 40px; font-size: 14px; background: white; }
+        canvas { max-height: 300px; width: 100%; height: 300px; }
+        .heatmap-container { overflow-x: auto; }
+        .heatmap-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .heatmap-table th, .heatmap-table td { border: 1px solid #e2e8f0; padding: 6px; text-align: center; }
+        .heatmap-cell { background: #f8fafc; transition: 0.1s; cursor: pointer; }
+        .menu-manager-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; background: linear-gradient(135deg, #fff7ed, #ffedd5); padding: 12px 16px; border-radius: 28px; }
+        .menu-manager-bar .selected-date { font-weight: 600; color: #f97316; background: white; padding: 6px 14px; border-radius: 40px; font-size: 13px; }
+        .manage-menu-btn { background: #f97316; color: white; padding: 10px 20px; border-radius: 40px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .manage-menu-btn:active { transform: scale(0.96); }
+        .menu-item-checkbox { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 20px; background: #f8fafc; transition: 0.1s; }
+        .menu-item-checkbox:hover { background: #f1f5f9; }
+        .menu-item-checkbox input { width: 20px; height: 20px; cursor: pointer; }
+        .select-all-btn { background: #f1f5f9; padding: 8px 16px; border-radius: 40px; font-size: 12px; font-weight: 500; cursor: pointer; margin-bottom: 12px; display: inline-block; }
+        .view-toggle { display: flex; gap: 8px; margin-left: auto; }
+        .view-toggle-btn { padding: 8px 14px; border-radius: 40px; font-size: 13px; font-weight: 600; background: #f1f5f9; color: #64748b; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+        .view-toggle-btn.active { background: #f97316; color: white; box-shadow: 0 2px 8px rgba(249,115,22,0.3); }
+        .view-toggle-btn:active { transform: scale(0.95); }
+        .scroll-to-cart-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #f97316;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 4px 16px rgba(249,115,22,0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            border: none;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .scroll-to-cart-btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(249,115,22,0.5); }
+        .scroll-to-cart-btn:active { transform: scale(0.92); }
+        .scroll-to-cart-btn.hidden { opacity: 0; transform: scale(0.8); pointer-events: none; }
+        .btn-group-order { display: flex; gap: 12px; margin-top: 12px; }
+        .btn-group-order button { flex: 1; }
+        .btn-secondary { background: #64748b; color: white; font-weight: 600; padding: 14px 18px; border-radius: 60px; font-size: 16px; transition: 0.2s; cursor: pointer; }
+        .btn-secondary:active { transform: scale(0.97); background: #475569; }
+        .kept-aside-container {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 8px 4px 16px 4px;
+            margin-bottom: 16px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+        .kept-aside-container::-webkit-scrollbar { height: 4px; }
+        .kept-aside-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .kept-aside-item {
+            flex: 0 0 180px;
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 12px 14px;
+            border-left: 4px solid #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .kept-aside-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .kept-aside-item .aside-header { font-weight: 600; font-size: 12px; color: #475569; margin-bottom: 6px; }
+        .kept-aside-item .aside-items { font-size: 11px; color: #64748b; flex: 1; }
+        .kept-aside-item .aside-total { font-weight: 700; font-size: 14px; color: #0f172a; margin-top: 6px; }
+        .kept-aside-empty { color: #94a3b8; font-size: 13px; padding: 8px 0; text-align: center; width: 100%; }
+        .estimated-qty-input { width: 70px; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 12px; text-align: center; margin-left: 8px; }
+        .donut-charts-container {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 16px;
+            padding: 16px 8px;
+            margin-top: 16px;
+            scrollbar-width: thin;
+        }
+        .donut-charts-container::-webkit-scrollbar { height: 6px; }
+        .donut-charts-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .donut-chart-wrapper {
+            flex: 0 0 50%;
+            min-width: 200px;
+            max-width: 300px;
+            background: white;
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #eef2ff;
+            position: relative;
+        }
+        .donut-chart-wrapper h4 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            color: #1e293b;
+        }
+        .donut-chart-wrapper canvas {
+            max-height: 180px;
+            height: 180px;
+            width: 100% !important;
+        }
+        .donut-chart-wrapper .chart-stats {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+        .donut-chart-wrapper .chart-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .donut-chart-wrapper .chart-stats .sold-dot { color: #22c55e; }
+        .donut-chart-wrapper .chart-stats .pending-dot { color: #ef4444; }
+        .donut-chart-wrapper .chart-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            font-weight: 700;
+            text-align: center;
+            pointer-events: none;
+            margin-top: 10px;
+        }
+        .chart-center-text .percentage {
+            font-size: 22px;
+            font-weight: 800;
+        }
+        .delete-kept-btn {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: none;
+            border-radius: 30px;
+            padding: 2px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: 0.1s;
+        }
+        .delete-kept-btn:hover { background: #fecaca; }
+        .color-green { color: #22c55e; }
+        .color-yellow { color: #eab308; }
+        .color-red { color: #ef4444; }
+        @media (max-width: 480px) {
+            .menu-grid.columns-2 { gap: 7px; }
+            .menu-grid.columns-2 .btn-grid-2x2 .add-cart-btn { font-size: 10px; padding: 6px 3px; }
+            .menu-grid.columns-2 .menu-info { padding: 8px; }
+            .menu-grid.columns-2 .menu-info strong { font-size: 0.85rem; }
+            .menu-grid.columns-2 .price-badge { font-size: 10px; padding: 1.5px 4px; }
+            .btn-grid-2x2 .add-cart-btn { font-size: 11px; padding: 10px 6px; }
+            .scroll-to-cart-btn { width: 50px; height: 50px; font-size: 20px; bottom: 40px; right: 20px; }
+            .kept-aside-item { flex: 0 0 150px; padding: 10px; }
+            .btn-group-order { flex-direction: column; gap: 8px; }
+            .donut-chart-wrapper { flex: 0 0 80%; min-width: 160px; }
+            .donut-chart-wrapper .chart-center-text { font-size: 16px; margin-top: 5px; }
+            .chart-center-text .percentage { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <div class="accordion-header" id="summaryAccordionHeader">
+            <div class="flex-between" style="width:100%;"><span class="date-badge" id="currentDateDisplay"></span><i class="fas fa-chart-line" style="color:#f97316;"></i><i class="fas fa-chevron-down accordion-icon" id="accordionIcon"></i></div>
+        </div>
+        <div class="accordion-content" id="accordionContent">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-shopping-cart"></i> Total Sales</div><div class="stat-value" id="totalSalesCount">0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-rupee-sign"></i> Total Revenue</div><div class="stat-value revenue-value" id="totalRevenueAmount">₹0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-chair"></i> Counter Sales</div><div class="stat-value" id="counterSalesCount">0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-chart-line"></i> Counter Revenue</div><div class="stat-value revenue-value" id="counterRevenueAmount">₹0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-bag-shopping"></i> Parcel Sales</div><div class="stat-value" id="parcelSalesCount">0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-chart-line"></i> Parcel Revenue</div><div class="stat-value revenue-value" id="parcelRevenueAmount">₹0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-money-bill-wave"></i> Cash Payment</div><div class="stat-value revenue-value" id="cashPaymentTotal">₹0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-credit-card"></i> Online Payment</div><div class="stat-value revenue-value" id="onlinePaymentTotal">₹0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-clock"></i> Pending Payment</div><div class="stat-value pending-value" id="pendingPaymentTotal">₹0</div></div>
+                <div class="stat-card"><div class="stat-label"><i class="fas fa-ban"></i> No Payment</div><div class="stat-value no-payment-value" id="noPaymentTotal">₹0</div></div>
+            </div>
+            <div class="filter-row"><input type="date" id="filterFromDate" class="filter-input"><input type="date" id="filterToDate" class="filter-input"><button id="applyDateFilterBtn" class="filter-btn"><i class="fas fa-filter"></i> Filter</button><button id="resetFilterBtn" class="filter-btn-outline"><i class="fas fa-undo-alt"></i> Reset</button></div>
+        </div>
+    </div>
+    <div class="tabs-container"><button class="tab-btn active" data-tab="tab1">🍽️ Order</button><button class="tab-btn" data-tab="tab2">📜 Sales</button><button class="tab-btn" data-tab="tab3">📊 Performance</button></div>
+    <div id="tab1" class="tab-content active">
+        <div class="card" id="cartSection">
+            <div class="flex-between"><h3><i class="fas fa-shopping-cart"></i> Current Order</h3><span id="cartItemCount" class="badge">0 items</span></div>
+            
+            <!-- Kept Aside Orders -->
+            <div id="keptAsideContainer" class="kept-aside-container"></div>
+            
+            <input type="text" id="customerNameInput" class="customer-input" placeholder="Customer Name (Optional)">
+            <div class="payment-options"><label class="payment-option"><input type="radio" name="paymentMode" value="cash"> <i class="fas fa-money-bill-wave"></i> Cash</label><label class="payment-option"><input type="radio" name="paymentMode" value="online"> <i class="fas fa-credit-card"></i> Online</label><label class="payment-option"><input type="radio" name="paymentMode" value="pending"> <i class="fas fa-clock"></i> Pending</label><label class="payment-option"><input type="radio" name="paymentMode" value="nopayment"> <i class="fas fa-ban"></i> No Payment</label></div>
+            <div id="cartItemsContainer" style="margin-top: 14px;"></div>
+            <div id="cartGrandTotal" class="grand-total">Grand Total: ₹0</div>
+            <div id="cartSummaryBreakdown" class="summary-list" style="display:none;"></div>
+            <div class="btn-group-order">
+                <button class="btn-secondary" id="keepAsideBtn"><i class="fas fa-archive"></i> Keep Aside</button>
+                <button class="btn-primary" id="saveOrderBtn"><i class="fas fa-save"></i> Save Order</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="menu-manager-bar">
+                <i class="fas fa-calendar-alt" style="color:#f97316;"></i>
+                <span class="selected-date" id="currentMenuDate"></span>
+                <button id="manageMenuBtn" class="manage-menu-btn"><i class="fas fa-edit"></i> Select Today's Items</button>
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" data-columns="1"><i class="fas fa-list"></i> 1</button>
+                    <button class="view-toggle-btn" data-columns="2"><i class="fas fa-th"></i> 2</button>
+                </div>
+            </div>
+            <div id="menuContainer" class="menu-grid"></div>
+        </div>
+    </div>
+    <div id="tab2" class="tab-content"><div class="card"><div class="section-title"><i class="fas fa-shopping-cart"></i> Cart Orders</div><input type="text" id="cartSearchInput" class="search-bar" placeholder="🔍 Search by customer name or item..."><div class="payment-filter" id="paymentFilterContainer"><button class="payment-filter-btn active" data-filter="all">All</button><button class="payment-filter-btn" data-filter="cash">💵 Cash</button><button class="payment-filter-btn" data-filter="online">💳 Online</button><button class="payment-filter-btn" data-filter="pending">⏳ Pending</button><button class="payment-filter-btn" data-filter="nopayment">🚫 No Payment</button></div><div id="cartHistoryContainer"></div><div id="cartPagination" class="pagination"></div></div></div>
+    <div id="tab3" class="tab-content"><div class="card"><div class="section-title"><i class="fas fa-chart-pie"></i> Snack Performance Summary</div><div class="table-wrapper"><table class="data-table" id="snackSummaryTable"><thead><tr><th>Snack</th><th>Counter Half</th><th>Counter Full</th><th>Parcel Half</th><th>Parcel Full</th><th>Total Qty</th><th>Revenue</th><th>Est. Qty</th></tr></thead><tbody id="snackSummaryBody"><tr><td colspan="8">No data</td></tr></tbody></table></div></div><div class="card"><div class="section-title"><i class="fas fa-chart-pie"></i> Donut Charts</div><div class="donut-charts-container" id="donutChartsContainer"></div></div><div class="card"><div class="section-title"><i class="fas fa-chart-line"></i> Performance Graphs</div><div class="month-picker"><select id="monthSelect" class="month-select"></select><select id="yearSelect" class="year-select"></select><button id="refreshGraphsBtn" class="filter-btn">Update Graphs</button></div><div class="graph-container"><div class="graph-title"><i class="fas fa-rupee-sign"></i> Total Revenue (Day-wise)</div><canvas id="revenueChart" style="height:300px;"></canvas></div><div class="graph-container" style="margin-top:20px;"><div class="graph-title"><i class="fas fa-chart-bar"></i> Counter vs Parcel Count (Day-wise)</div><canvas id="combinedChart" style="height:300px;"></canvas></div><div class="graph-container" style="margin-top:20px;"><div class="graph-title"><i class="fas fa-clock"></i> Sales Heatmap (Time vs Day)</div><div class="heatmap-container"><table class="heatmap-table" id="heatmapTable"></table></div></div></div></div>
+    
+    <!-- Scroll to Cart Button -->
+    <button class="scroll-to-cart-btn" id="scrollToCartBtn" aria-label="Scroll to cart">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</div>
+<div id="toastMsg" class="toast"></div>
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyBZn1isgreU_1YcVl7dQ5haa28gZ-vCrM4", authDomain: "goodnessdata-41725.firebaseapp.com", databaseURL: "https://goodnessdata-41725-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "goodnessdata-41725", storageBucket: "goodnessdata-41725.firebasestorage.app", messagingSenderId: "356636455950", appId: "1:356636455950:web:53e34801a3a251857cb85f" };
+    firebase.initializeApp(firebaseConfig); 
+    const database = firebase.database(); 
+    const salesRef = database.ref('sales');
+    const metaRef = database.ref('metadata');
+    
+    const MASTER_SNACKS = [
+        { id: "pohe", name: "Pohe", halfPrice: 20, fullPrice: 30, image: "https://lh3.googleusercontent.com/d/1qLIIPRox2HFGkTuyht7iT-FGApAFPP28" },
+        { id: "upma", name: "Upma", halfPrice: 20, fullPrice: 30, image: "https://lh3.googleusercontent.com/d/1VM8cUIUzTLKJQwAu9jx84IIkRNgmazyi" },
+        { id: "ghavne", name: "Ghavne", halfPrice: 15, fullPrice: 15, image: "https://lh3.googleusercontent.com/d/1xgoupKIa5MYV2ROkn1IU2OfxrmYKJTOv" },
+        { id: "amboli", name: "Amboli", halfPrice: 25, fullPrice: 25, image: "https://lh3.googleusercontent.com/d/15UTtuj5VJs481C7WQ52myUf4nodFil5A" },
+        { id: "misalpav", name: "Misal Pav", halfPrice: 50, fullPrice: 50, image: "https://lh3.googleusercontent.com/d/10d5RpLUeMchEMV9nzS8d3wNeMytO4lJz" },
+        { id: "sabudana khichadi", name: "Khichadi", halfPrice: 25, fullPrice: 35, image: "https://lh3.googleusercontent.com/d/1al11pFhE_cnESRtlDnPJYEgfNSYYVXcZ" },
+        { id: "shira", name: "Shira", halfPrice: 20, fullPrice: 30, image: "https://lh3.googleusercontent.com/d/1XZGphW4EVf-4nm1fYzO2N7QxtWZyLylP" },
+        { id: "pineappleshira", name: "Pineapple Shira", halfPrice: 25, fullPrice: 40, image: "https://lh3.googleusercontent.com/d/1zLfq9ThJ17NPrQv5FLvjStH5_beHa6RJ" },
+        { id: "puranpoli", name: "Puranpoli", halfPrice: 35, fullPrice: 35, image: "https://lh3.googleusercontent.com/d/16aDMBeYYyBGP79gCOzGTC5OSOc-84UTJ" },
+        { id: "tea", name: "Tea", halfPrice: 5, fullPrice: 10, image: "https://lh3.googleusercontent.com/d/1gWqgyyKo4KqPMG3N_YQbNgUk3_kac_2F" }
+    ];
+    const MIX_ITEM = { id: "mixbreakfast", name: "Mix Breakfast", halfPrice: 0, fullPrice: 0, image: "https://lh3.googleusercontent.com/d/1cTNELgLReqyQN750VnDgT_Y6qsJswld8", isMix: true };
+    let activeSnacks = [...MASTER_SNACKS];
+    let estimatedQuantities = {};
+    let cart = [], allSales = [], currentFilter = { fromDate: "", toDate: "" }, cartHistoryPage = 1, currentPaymentFilter = "all", currentSearchTerm = "";
+    const CART_PAGE_SIZE = 10; 
+    let revenueChart, combinedChart; 
+    let currentView = 1;
+    let keptAsideOrders = [];
+    let donutCharts = {};
+    
+    function getTodayDate() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
+    function formatDateForDisplay(dateStr) { if(!dateStr) return ''; const parts = dateStr.split('-'); return `${parts[2]}/${parts[1]}/${parts[0]}`; }
+    function showToast(msg, isErr = false) { const t = document.getElementById('toastMsg'); t.innerText = msg; t.style.backgroundColor = isErr ? '#b91c1c' : '#1e293b'; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 2300); }
+    function getISTDateTime() { const now = new Date(), offset = 5.5 * 60 * 60 * 1000, d = new Date(now.getTime() + offset); return { date: `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`, time: `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}` }; }
+    function formatDateDMY(dateStr) { if(!dateStr) return ''; const parts = dateStr.split('-'); return `${parts[2]}-${parts[1]}-${parts[0]}`; }
+    
+    // Firebase persistence functions
+    async function loadKeptAsideFromFirebase() {
+        try {
+            const snap = await metaRef.child('keptAside').once('value');
+            const data = snap.val();
+            if (data) {
+                keptAsideOrders = Object.values(data);
+                keptAsideOrders.sort((a, b) => (b.id || 0) - (a.id || 0));
+            } else {
+                keptAsideOrders = [];
+            }
+            renderKeptAside();
+        } catch (err) {
+            console.error('Error loading kept aside orders:', err);
+            keptAsideOrders = [];
+            renderKeptAside();
+        }
+    }
+    
+    async function saveKeptAsideToFirebase() {
+        try {
+            const updates = {};
+            keptAsideOrders.forEach((order, index) => {
+                const key = order.id || Date.now() + index;
+                updates[`/${key}`] = order;
+            });
+            await metaRef.child('keptAside').set(updates);
+            console.log('Kept aside orders saved to Firebase:', keptAsideOrders.length);
+        } catch (err) {
+            console.error('Error saving kept aside orders:', err);
+            showToast('Error saving kept aside orders to Firebase', true);
+        }
+    }
+    
+    async function loadDailyMenuFromFirebase() {
+        const today = getTodayDate();
+        try {
+            const snap = await metaRef.child(`dailyMenu/${today}`).once('value');
+            const data = snap.val();
+            if (data && data.items) {
+                activeSnacks = data.items;
+                estimatedQuantities = data.estimatedQuantities || {};
+            } else {
+                activeSnacks = [...MASTER_SNACKS];
+                estimatedQuantities = {};
+                await saveDailyMenuToFirebase(activeSnacks, estimatedQuantities);
+            }
+            document.getElementById('currentMenuDate').innerHTML = `<i class="fas fa-calendar-day"></i> ${formatDateForDisplay(today)}`;
+            updateMenuStatsFromGlobal();
+            updateSnackSummaryTable(getFilteredSales());
+            renderDonutCharts();
+        } catch (err) {
+            console.error('Error loading daily menu:', err);
+            activeSnacks = [...MASTER_SNACKS];
+            estimatedQuantities = {};
+            document.getElementById('currentMenuDate').innerHTML = `<i class="fas fa-calendar-day"></i> ${formatDateForDisplay(today)}`;
+            updateMenuStatsFromGlobal();
+            updateSnackSummaryTable(getFilteredSales());
+            renderDonutCharts();
+        }
+    }
+    
+    async function saveDailyMenuToFirebase(snacksList, estQuantities) {
+        const today = getTodayDate();
+        try {
+            await metaRef.child(`dailyMenu/${today}`).set({
+                items: snacksList,
+                estimatedQuantities: estQuantities || estimatedQuantities,
+                updatedAt: Date.now()
+            });
+            activeSnacks = snacksList;
+            estimatedQuantities = estQuantities || estimatedQuantities;
+            updateMenuStatsFromGlobal();
+            updateSnackSummaryTable(getFilteredSales());
+            renderDonutCharts();
+            showToast(`Today's menu updated with ${snacksList.length} items`);
+        } catch (err) {
+            console.error('Error saving daily menu:', err);
+            showToast('Error saving menu to Firebase: ' + err.message, true);
+        }
+    }
+    
+    function loadDailyMenu() {
+        loadDailyMenuFromFirebase();
+    }
+    
+    function openMenuManager() {
+        const modal = document.createElement('div'); modal.className = 'modal-overlay';
+        const today = getTodayDate();
+        const currentEstQuantities = { ...estimatedQuantities };
+        modal.innerHTML = `<div class="modal-content"><h3><i class="fas fa-calendar-alt"></i> Select Menu for ${formatDateForDisplay(today)}</h3><div style="margin: 12px 0;"><button id="selectAllBtn" class="select-all-btn"><i class="fas fa-check-double"></i> Select All</button> <button id="deselectAllBtn" class="select-all-btn"><i class="fas fa-times"></i> Deselect All</button></div><div style="max-height:350px;overflow-y:auto;">${MASTER_SNACKS.map(s => `<label class="menu-item-checkbox" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;margin-bottom:8px;background:#f8fafc;"><input type="checkbox" value="${s.id}" ${activeSnacks.some(a=>a.id===s.id) ? 'checked' : ''}> <strong>${s.name}</strong> <span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:12px;color:#64748b;">Est. Qty: <input type="number" class="estimated-qty-input" data-id="${s.id}" value="${currentEstQuantities[s.id] || 0}" min="0" style="width:70px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;text-align:center;"></span></label>`).join('')}</div><div class="modal-buttons"><button id="saveMenuBtn" style="background:#f97316;color:white;">Save Today's Menu</button><button id="cancelMenuBtn" style="background:#f1f5f9;">Cancel</button></div></div>`;
+        document.body.appendChild(modal);
+        
+        document.getElementById('selectAllBtn').onclick = () => { modal.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true); };
+        document.getElementById('deselectAllBtn').onclick = () => { modal.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false); };
+        document.getElementById('saveMenuBtn').onclick = async () => { 
+            const selectedIds = [...modal.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+            const newMenu = MASTER_SNACKS.filter(s => selectedIds.includes(s.id));
+            const newEstQuantities = {};
+            modal.querySelectorAll('.estimated-qty-input').forEach(inp => {
+                const val = parseInt(inp.value);
+                if (!isNaN(val) && val >= 0) {
+                    newEstQuantities[inp.dataset.id] = val;
+                }
+            });
+            await saveDailyMenuToFirebase(newMenu, newEstQuantities);
+            document.body.removeChild(modal);
+        };
+        document.getElementById('cancelMenuBtn').onclick = () => document.body.removeChild(modal);
+    }
+    
+    function getItemWeight(saleType) {
+        if (saleType === 'Counter Half' || saleType === 'Parcel Half') return 0.5;
+        if (saleType === 'Counter Full' || saleType === 'Parcel Full') return 1;
+        return 0.5; // Default for mix items
+    }
+    
+    function getFilteredSales() {
+        let filtered = allSales;
+        if (currentFilter.fromDate) filtered = filtered.filter(s => s.date >= currentFilter.fromDate);
+        if (currentFilter.toDate) filtered = filtered.filter(s => s.date <= currentFilter.toDate);
+        return filtered;
+    }
+    
+    function renderDonutCharts() {
+        const container = document.getElementById('donutChartsContainer');
+        if (!container) return;
+        
+        // Destroy existing charts
+        Object.values(donutCharts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        donutCharts = {};
+        
+        container.innerHTML = '';
+        
+        const filteredSales = getFilteredSales();
+        
+        // Calculate sold quantities for each item
+        const soldQuantities = {};
+        const mixItemsMap = {};
+        
+        // First pass: collect mix items
+        for (let sale of filteredSales) {
+            if (sale.mixItems) {
+                const items = sale.mixItems.split(' + ');
+                const weight = getItemWeight(sale.saleType);
+                for (let itemName of items) {
+                    if (!mixItemsMap[itemName]) mixItemsMap[itemName] = 0;
+                    mixItemsMap[itemName] += weight * sale.quantity;
+                }
+            }
+        }
+        
+        // Second pass: regular items
+        for (let sale of filteredSales) {
+            if (!sale.mixItems) {
+                const weight = getItemWeight(sale.saleType);
+                if (!soldQuantities[sale.snackName]) soldQuantities[sale.snackName] = 0;
+                soldQuantities[sale.snackName] += weight * sale.quantity;
+            }
+        }
+        
+        // Add mix items quantities
+        for (let [name, qty] of Object.entries(mixItemsMap)) {
+            if (!soldQuantities[name]) soldQuantities[name] = 0;
+            soldQuantities[name] += qty;
+        }
+        
+        // Create donut charts for each item in the menu
+        activeSnacks.forEach(snack => {
+            const sold = soldQuantities[snack.name] || 0;
+            const estimated = estimatedQuantities[snack.id] || 0;
+            const pending = Math.max(0, estimated - sold);
+            
+            if (estimated === 0 && sold === 0) return; // Skip if no data
+            
+            const percentage = estimated > 0 ? (sold / estimated) * 100 : 0;
+            let colorClass = 'color-green';
+            let percentageColor = '#22c55e';
+            if (percentage >= 85) {
+                colorClass = 'color-green';
+                percentageColor = '#22c55e';
+            } else if (percentage >= 50 && percentage < 85) {
+                colorClass = 'color-yellow';
+                percentageColor = '#eab308';
+            } else {
+                colorClass = 'color-red';
+                percentageColor = '#ef4444';
+            }
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'donut-chart-wrapper';
+            wrapper.innerHTML = `
+                <h4>${snack.name}</h4>
+                <div style="position:relative;">
+                    <canvas id="donut_${snack.id}"></canvas>
+                    <div class="chart-center-text">
+                        <div class="percentage ${colorClass}">${percentage.toFixed(1)}%</div>
+                    </div>
+                </div>
+                <div class="chart-stats">
+                    <span><span class="sold-dot">●</span> Sold: ${sold.toFixed(1)}</span>
+                    <span><span class="pending-dot">●</span> Pending: ${pending.toFixed(1)}</span>
+                </div>
+            `;
+            container.appendChild(wrapper);
+            
+            const ctx = document.getElementById(`donut_${snack.id}`).getContext('2d');
+            donutCharts[snack.id] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Sold', 'Pending'],
+                    datasets: [{
+                        data: [sold, pending],
+                        backgroundColor: ['#22c55e', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+    }
+    
+    function groupIntoCarts() { 
+        let filteredSales = allSales; 
+        if (currentFilter.fromDate) filteredSales = filteredSales.filter(s => s.date >= currentFilter.fromDate); 
+        if (currentFilter.toDate) filteredSales = filteredSales.filter(s => s.date <= currentFilter.toDate); 
+        if (currentPaymentFilter !== "all") filteredSales = filteredSales.filter(s => s.paymentMode === currentPaymentFilter); 
+        if (currentSearchTerm) { const term = currentSearchTerm.toLowerCase(); filteredSales = filteredSales.filter(s => (s.customerName && s.customerName.toLowerCase().includes(term)) || s.snackName.toLowerCase().includes(term)); } 
+        const carts = new Map(); 
+        for (let sale of filteredSales) { 
+            const cartKey = sale.cartId || `${sale.createdAt}_${sale.customerName || 'Guest'}_${sale.time}`; 
+            if (!carts.has(cartKey)) carts.set(cartKey, { id: cartKey, date: sale.date, time: sale.time, customerName: sale.customerName || 'Guest', paymentMode: sale.paymentMode || 'pending', items: [], grandTotal: 0, createdAt: sale.createdAt, cartSaleIds: [] }); 
+            const cart = carts.get(cartKey); 
+            cart.items.push({ id: sale.id, name: sale.snackName, type: sale.saleType, quantity: sale.quantity, unitPrice: sale.unitPrice, total: sale.totalAmount, mixItems: sale.mixItems }); 
+            cart.cartSaleIds.push(sale.id); 
+            cart.grandTotal += sale.totalAmount; 
+            cart.date = sale.date; 
+            cart.time = sale.time; 
+        } 
+        return Array.from(carts.values()).sort((a,b) => (b.createdAt||0) - (a.createdAt||0)); 
+    }
+    
+    function updateDashboardWithFilter() { 
+        let filtered = allSales; 
+        if (currentFilter.fromDate) filtered = filtered.filter(s => s.date >= currentFilter.fromDate); 
+        if (currentFilter.toDate) filtered = filtered.filter(s => s.date <= currentFilter.toDate); 
+        let totalSalesQty = 0, totalRevenue = 0, counterQty = 0, counterRev = 0, parcelQty = 0, parcelRev = 0, cashTotal = 0, onlineTotal = 0, pendingTotal = 0, noPaymentTotal = 0; 
+        for (let s of filtered) { 
+            totalSalesQty += Number(s.quantity); 
+            if (s.paymentMode !== 'pending' && s.paymentMode !== 'nopayment') totalRevenue += Number(s.totalAmount); 
+            if (s.saleType === 'Counter Half' || s.saleType === 'Counter Full') { counterQty += Number(s.quantity); if (s.paymentMode !== 'pending' && s.paymentMode !== 'nopayment') counterRev += Number(s.totalAmount); } 
+            else if (s.saleType === 'Parcel Half' || s.saleType === 'Parcel Full') { parcelQty += Number(s.quantity); if (s.paymentMode !== 'pending' && s.paymentMode !== 'nopayment') parcelRev += Number(s.totalAmount); } 
+            if(s.paymentMode === 'cash') cashTotal += Number(s.totalAmount); 
+            else if(s.paymentMode === 'online') onlineTotal += Number(s.totalAmount); 
+            else if(s.paymentMode === 'pending') pendingTotal += Number(s.totalAmount); 
+            else if(s.paymentMode === 'nopayment') noPaymentTotal += Number(s.totalAmount); 
+        } 
+        document.getElementById('totalSalesCount').innerText = totalSalesQty; 
+        document.getElementById('totalRevenueAmount').innerText = `₹${totalRevenue}`; 
+        document.getElementById('counterSalesCount').innerText = counterQty; 
+        document.getElementById('counterRevenueAmount').innerText = `₹${counterRev}`; 
+        document.getElementById('parcelSalesCount').innerText = parcelQty; 
+        document.getElementById('parcelRevenueAmount').innerText = `₹${parcelRev}`; 
+        document.getElementById('cashPaymentTotal').innerHTML = `₹${cashTotal}`; 
+        document.getElementById('onlinePaymentTotal').innerHTML = `₹${onlineTotal}`; 
+        document.getElementById('pendingPaymentTotal').innerHTML = `₹${pendingTotal}`; 
+        document.getElementById('noPaymentTotal').innerHTML = `₹${noPaymentTotal}`; 
+        updateSnackSummaryTable(filtered); 
+        renderDonutCharts();
+    }
+    
+    function updateSnackSummaryTable(filteredSales = allSales) { 
+        const summary = new Map(); 
+        MASTER_SNACKS.forEach(s => summary.set(s.name, { counterHalf: 0, counterFull: 0, parcelHalf: 0, parcelFull: 0, revenue: 0, estimated: estimatedQuantities[s.id] || 0 })); 
+        for (let sale of filteredSales) { 
+            let stat = summary.get(sale.snackName); 
+            if (stat) { 
+                if (sale.saleType === 'Counter Half') stat.counterHalf += Number(sale.quantity); 
+                else if (sale.saleType === 'Counter Full') stat.counterFull += Number(sale.quantity); 
+                else if (sale.saleType === 'Parcel Half') stat.parcelHalf += Number(sale.quantity); 
+                else if (sale.saleType === 'Parcel Full') stat.parcelFull += Number(sale.quantity); 
+                if (sale.paymentMode !== 'pending' && sale.paymentMode !== 'nopayment') stat.revenue += Number(sale.totalAmount); 
+            } else if (sale.snackName === 'Mix Breakfast' && sale.mixItems) { 
+                const mixItems = sale.mixItems.split(' + '); 
+                for (let itemName of mixItems) { 
+                    let itemStat = summary.get(itemName); 
+                    if (itemStat) { 
+                        if (sale.saleType === 'Counter Half') itemStat.counterHalf += Number(sale.quantity); 
+                        else if (sale.saleType === 'Parcel Half') itemStat.parcelHalf += Number(sale.quantity); 
+                        if (sale.paymentMode !== 'pending' && sale.paymentMode !== 'nopayment') itemStat.revenue += Number(sale.totalAmount) / mixItems.length; 
+                    } 
+                } 
+            } 
+        } 
+        const tbody = document.getElementById('snackSummaryBody'); 
+        if (!tbody) return; 
+        if (filteredSales.length === 0) { tbody.innerHTML = '<tr><td colspan="8">No data</td></tr>'; return; } 
+        tbody.innerHTML = ''; 
+        for (let [name, stat] of summary.entries()) { 
+            let totalQty = stat.counterHalf + stat.counterFull + stat.parcelHalf + stat.parcelFull; 
+            let row = tbody.insertRow(); 
+            row.insertCell(0).innerText = name; 
+            row.insertCell(1).innerText = stat.counterHalf; 
+            row.insertCell(2).innerText = stat.counterFull; 
+            row.insertCell(3).innerText = stat.parcelHalf; 
+            row.insertCell(4).innerText = stat.parcelFull; 
+            row.insertCell(5).innerText = totalQty; 
+            row.insertCell(6).innerHTML = `<strong>₹${Math.round(stat.revenue)}</strong>`;
+            row.insertCell(7).innerHTML = `<strong>${stat.estimated}</strong>`;
+        } 
+    }
+    
+    function updateMenuStatsFromGlobal() { 
+        const container = document.getElementById('menuContainer'); 
+        if (!container) return; 
+        container.className = 'menu-grid' + (currentView === 2 ? ' columns-2' : '');
+        container.innerHTML = ''; 
+        [...activeSnacks, MIX_ITEM].forEach(snack => { 
+            if(snack.isMix) { 
+                const card = document.createElement('div'); card.className = 'menu-card'; 
+                card.innerHTML = `<img class="menu-img" src="${snack.image}" onerror="this.src='https://placehold.co/600x338'"><div class="menu-info"><strong style="font-size:1.2rem;">${snack.name}</strong><div class="price-row"><span class="price-badge">Select any 2+ items</span><span class="price-badge">Half price each</span></div><div class="btn-grid-2x2"><button class="add-cart-btn btn-counter mix-counter-btn"><i class="fas fa-chair"></i> Half Counter</button><button class="add-cart-btn btn-parcel mix-parcel-btn"><i class="fas fa-bag-shopping"></i> Half Parcel</button></div></div>`; 
+                container.appendChild(card); 
+            } else { 
+                const card = document.createElement('div'); card.className = 'menu-card'; 
+                const halfParcelPrice = snack.halfPrice;
+                const estQty = estimatedQuantities[snack.id] || 0;
+                card.innerHTML = `<img class="menu-img" src="${snack.image}" onerror="this.src='https://placehold.co/600x338'"><div class="menu-info"><strong style="font-size:1.2rem;">${snack.name}</strong><div class="price-row"><span class="price-badge">🍽️ Half: ₹${snack.halfPrice}</span><span class="price-badge">🍽️ Full: ₹${snack.fullPrice}</span><span class="price-badge" style="background:#e0f2fe;">📊 Est: ${estQty}</span></div><div class="btn-grid-2x2"><button class="add-cart-btn btn-counter" data-id="${snack.id}" data-name="${snack.name}" data-price="${snack.halfPrice}" data-type="Counter Half"><i class="fas fa-chair"></i> Half Counter</button><button class="add-cart-btn btn-counter" data-id="${snack.id}" data-name="${snack.name}" data-price="${snack.fullPrice}" data-type="Counter Full"><i class="fas fa-chair"></i> Full Counter</button><button class="add-cart-btn btn-parcel" data-id="${snack.id}" data-name="${snack.name}" data-price="${halfParcelPrice}" data-type="Parcel Half"><i class="fas fa-takeout"></i> Half Parcel</button><button class="add-cart-btn btn-parcel" data-id="${snack.id}" data-name="${snack.name}" data-price="${snack.fullPrice}" data-type="Parcel Full"><i class="fas fa-bag-shopping"></i> Full Parcel</button></div></div>`; 
+                container.appendChild(card); 
+            } 
+        }); 
+        document.querySelectorAll('.add-cart-btn[data-id]').forEach(btn => { btn.addEventListener('click', () => addToCart(btn.dataset.id, btn.dataset.name, parseFloat(btn.dataset.price), btn.dataset.type)); }); 
+        document.querySelectorAll('.mix-counter-btn').forEach(btn => { btn.addEventListener('click', () => openMixSelection('Counter Half')); }); 
+        document.querySelectorAll('.mix-parcel-btn').forEach(btn => { btn.addEventListener('click', () => openMixSelection('Parcel Half')); }); 
+    }
+    
+    function openMixSelection(saleType) { 
+        const modal = document.createElement('div'); modal.className = 'modal-overlay'; 
+        let selectedItems = []; 
+        const normalSnacks = activeSnacks; 
+        modal.innerHTML = `<div class="modal-content"><h3><i class="fas fa-layer-group"></i> Mix Breakfast (${saleType === 'Counter Half' ? 'Counter' : 'Parcel'})</h3><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Select at least 2 items (charged half of full price each)</p><div class="mix-items-grid">${normalSnacks.map(s => `<div class="mix-item-option" data-id="${s.id}" data-name="${s.name}" data-price="${Math.round(s.fullPrice / 2)}"><input type="checkbox"> <strong>${s.name}</strong> <span style="margin-left:auto;">₹${Math.round(s.fullPrice / 2)}</span></div>`).join('')}</div><div class="modal-buttons"><button id="confirmMixBtn" style="background:#f97316;color:white;">Add (₹0)</button><button id="cancelMixBtn">Cancel</button></div></div>`; 
+        document.body.appendChild(modal); 
+        const update = () => { 
+            const checked = [...modal.querySelectorAll('input:checked')]; 
+            const total = checked.reduce((s, cb) => s + parseFloat(cb.closest('.mix-item-option').dataset.price), 0); 
+            modal.querySelector('#confirmMixBtn').innerHTML = `Add (₹${total})`; 
+            selectedItems = checked.map(cb => ({ name: cb.closest('.mix-item-option').dataset.name, price: parseFloat(cb.closest('.mix-item-option').dataset.price) })); 
+        }; 
+        modal.querySelector('.mix-items-grid').addEventListener('change', update); 
+        modal.querySelector('#confirmMixBtn').onclick = () => { 
+            const checks = modal.querySelectorAll('input:checked'); 
+            if(checks.length < 2) { showToast("Select at least 2 items", true); return; } 
+            cart.push({ snackId: 'mixbreakfast', name: 'Mix Breakfast', type: saleType, quantity: 1, unitPrice: selectedItems.reduce((s,i)=>s+i.price,0), mixItems: selectedItems.map(i=>i.name).join(' + ') }); 
+            renderCart(); 
+            document.body.removeChild(modal); 
+            showToast(`Mix Breakfast (${saleType === 'Counter Half' ? 'Counter' : 'Parcel'}) added with ${selectedItems.length} items`); 
+        }; 
+        modal.querySelector('#cancelMixBtn').onclick = () => document.body.removeChild(modal); 
+    }
+    
+    function addToCart(id, name, price, type) { 
+        const existing = cart.find(i => i.snackId === id && i.type === type); 
+        if (existing) { existing.quantity++; showToast(`➕ ${name} (${type}) +1`); } 
+        else { cart.push({ snackId: id, name, type, quantity: 1, unitPrice: price }); showToast(`🍽️ ${name} (${type}) added`); } 
+        renderCart(); 
+        renderKeptAside(); 
+    }
+    
+    function renderCart() { 
+        const container = document.getElementById('cartItemsContainer'); 
+        if (!container) return; 
+        if (cart.length === 0) { container.innerHTML = '<div style="text-align:center;padding:20px;">Cart empty</div>'; document.getElementById('cartGrandTotal').innerHTML = 'Grand Total: ₹0'; document.getElementById('cartItemCount').innerText = '0 items'; document.getElementById('cartSummaryBreakdown').style.display = 'none'; return; } 
+        let grandTotal = 0, totalItems = 0, html = ''; 
+        cart.forEach((item, idx) => { 
+            const lineTotal = item.quantity * item.unitPrice; 
+            grandTotal += lineTotal; 
+            totalItems += item.quantity; 
+            html += `<div class="cart-item"><div class="item-row"><span><strong>${item.name}</strong> (${item.type})</span><input type="number" class="price-edit-input" data-idx="${idx}" value="${item.unitPrice}" style="width:75px;"></div><div class="flex-between"><div class="qty-controls"><button class="qty-btn" data-idx="${idx}" data-delta="-1">-</button><span>${item.quantity}</span><button class="qty-btn" data-idx="${idx}" data-delta="1">+</button></div><strong>₹${lineTotal}</strong><button class="action-btn delete-cart-item" data-idx="${idx}"><i class="fas fa-trash"></i></button></div>${item.mixItems ? `<div style="font-size:11px;">Includes: ${item.mixItems}</div>` : ''}</div>`; 
+        }); 
+        container.innerHTML = html; 
+        document.getElementById('cartGrandTotal').innerHTML = `Grand Total: ₹${grandTotal}`; 
+        document.getElementById('cartItemCount').innerText = `${totalItems} items`; 
+        const summaryDiv = document.getElementById('cartSummaryBreakdown'); 
+        summaryDiv.style.display = 'block'; 
+        summaryDiv.innerHTML = '<strong>📋 Order Summary</strong>' + cart.map(i => `<div class="summary-item"><span>${i.name} | ${i.type} | Qty:${i.quantity}</span><span>₹${i.quantity*i.unitPrice}</span></div>`).join(''); 
+        document.querySelectorAll('.qty-btn').forEach(btn => { 
+            btn.onclick = () => { 
+                const idx = parseInt(btn.dataset.idx), delta = parseInt(btn.dataset.delta); 
+                if(cart[idx]) { cart[idx].quantity = Math.max(0, cart[idx].quantity+delta); if(cart[idx].quantity===0) cart.splice(idx,1); renderCart(); renderKeptAside(); } 
+            }; 
+        }); 
+        document.querySelectorAll('.price-edit-input').forEach(inp => { 
+            inp.onchange = () => { 
+                const idx = parseInt(inp.dataset.idx), newP = parseFloat(inp.value); 
+                if(cart[idx] && !isNaN(newP) && newP>=0) { cart[idx].unitPrice = newP; renderCart(); renderKeptAside(); } 
+            }; 
+        }); 
+        document.querySelectorAll('.delete-cart-item').forEach(btn => { 
+            btn.onclick = () => { 
+                const idx = parseInt(btn.dataset.idx); 
+                cart.splice(idx,1); 
+                renderCart(); 
+                renderKeptAside(); 
+            }; 
+        }); 
+    }
+    
+    async function keepAsideCurrentCart() {
+        if (cart.length === 0) { showToast("Cart is empty!", true); return; }
+        const customerName = document.getElementById('customerNameInput').value.trim() || "";
+        const asideOrder = {
+            id: Date.now(),
+            items: JSON.parse(JSON.stringify(cart)),
+            grandTotal: cart.reduce((sum, i) => sum + (i.quantity * i.unitPrice), 0),
+            itemCount: cart.reduce((sum, i) => sum + i.quantity, 0),
+            timestamp: new Date().toLocaleString(),
+            customerName: customerName,
+            createdAt: Date.now()
+        };
+        keptAsideOrders.push(asideOrder);
+        await saveKeptAsideToFirebase();
+        cart = [];
+        document.getElementById('customerNameInput').value = '';
+        renderCart();
+        renderKeptAside();
+        showToast("Order kept aside! You can start a new cart.");
+    }
+    
+    function loadKeptAsideOrder(index) {
+        const order = keptAsideOrders[index];
+        if (!order) return;
+        if (cart.length > 0) {
+            if (!confirm("Current cart has items. Load kept aside order? It will replace current cart.")) return;
+        }
+        cart = JSON.parse(JSON.stringify(order.items));
+        if (order.customerName) {
+            document.getElementById('customerNameInput').value = order.customerName;
+        }
+        keptAsideOrders.splice(index, 1);
+        saveKeptAsideToFirebase();
+        renderCart();
+        renderKeptAside();
+        showToast("Kept aside order loaded for editing.");
+        document.getElementById('cartSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    async function deleteKeptAsideOrder(index) {
+        if (!confirm("Delete this kept aside order?")) return;
+        keptAsideOrders.splice(index, 1);
+        await saveKeptAsideToFirebase();
+        renderKeptAside();
+        showToast("Kept aside order deleted.");
+    }
+    
+    function renderKeptAside() {
+        const container = document.getElementById('keptAsideContainer');
+        if (!container) return;
+        if (keptAsideOrders.length === 0) {
+            container.innerHTML = '<div class="kept-aside-empty">No orders kept aside</div>';
+            return;
+        }
+        container.innerHTML = keptAsideOrders.map((order, index) => `
+            <div class="kept-aside-item">
+                <div class="aside-header">📦 Order #${index + 1} ${order.customerName ? '👤 ' + order.customerName : ''}</div>
+                <div class="aside-items">
+                    ${order.items.map(i => `${i.name} (${i.type}) ×${i.quantity}`).join('<br>')}
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                    <div class="aside-total">₹${order.grandTotal}</div>
+                    <div>
+                        <button class="delete-kept-btn" onclick="deleteKeptAsideOrder(${index})"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn edit-btn" onclick="loadKeptAsideOrder(${index})" style="font-size:11px; padding:2px 8px;">Load</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    window.loadKeptAsideOrder = loadKeptAsideOrder;
+    window.deleteKeptAsideOrder = deleteKeptAsideOrder;
+    
+    async function saveOrder() { 
+        const paymentRadio = document.querySelector('input[name="paymentMode"]:checked');
+        if (!paymentRadio) { showToast("Select payment mode", true); return; }
+        if (cart.length === 0) { showToast("Cart empty!", true); return; }
+        if (!confirm("Save order?")) return;
+        const customerName = document.getElementById('customerNameInput').value.trim() || "";
+        const paymentMode = paymentRadio.value;
+        const { date, time } = getISTDateTime();
+        const ts = Date.now();
+        const cartId = `cart_${ts}_${customerName}`;
+        const updates = {};
+        for (let item of cart) {
+            const key = salesRef.push().key;
+            updates[key] = { 
+                id: key, cartId, date, time, snackName: item.name, saleType: item.type, 
+                quantity: item.quantity, unitPrice: item.unitPrice, totalAmount: item.quantity * item.unitPrice, 
+                createdAt: ts, paymentMode, customerName, mixItems: item.mixItems || null
+            };
+        }
+        try {
+            await salesRef.update(updates);
+            showToast("✅ Order saved!");
+            cart = [];
+            document.getElementById('customerNameInput').value = '';
+            document.querySelectorAll('input[name="paymentMode"]').forEach(r => r.checked = false);
+            renderCart();
+            renderKeptAside();
+            await loadAllSales();
+        } catch (err) { showToast("Error: " + err.message, true); }
+    }
+    
+    async function deleteCart(cartObj) { 
+        if (!confirm(`Delete entire cart order for ${cartObj.customerName}?`)) return; 
+        try { 
+            const updates = {}; 
+            for (let saleId of cartObj.cartSaleIds) updates[`/${saleId}`] = null; 
+            await salesRef.update(updates); 
+            showToast("Cart order deleted!"); 
+            await loadAllSales(); 
+        } catch (err) { showToast("Delete failed: " + err.message, true); } 
+    }
+    
+    async function editCart(cartObj) { 
+        const modal = document.createElement('div'); modal.className = 'modal-overlay'; 
+        modal.innerHTML = `<div class="modal-content"><h3>Edit Cart Order</h3><label>Customer Name:</label><input type="text" id="editCustomerName" value="${cartObj.customerName}"><label>Payment Mode:</label><select id="editPaymentMode"><option value="cash" ${cartObj.paymentMode === 'cash' ? 'selected' : ''}>Cash</option><option value="online" ${cartObj.paymentMode === 'online' ? 'selected' : ''}>Online</option><option value="pending" ${cartObj.paymentMode === 'pending' ? 'selected' : ''}>Pending</option><option value="nopayment" ${cartObj.paymentMode === 'nopayment' ? 'selected' : ''}>No Payment</option></select><h4>Items:</h4>${cartObj.items.map((item, idx) => `<div style="border:1px solid #e2e8f0; border-radius:16px; padding:10px; margin:8px 0;"><strong>${item.name}</strong> (${item.type})<br>${item.mixItems ? `<small>📦 ${item.mixItems}</small><br>` : ''}Qty: <input type="number" class="edit-item-qty" data-idx="${idx}" value="${item.quantity}" min="1" style="width:60px;"> Price: ₹<input type="number" class="edit-item-price" data-idx="${idx}" value="${item.unitPrice}" min="0" style="width:80px;"></div>`).join('')}<div class="modal-buttons"><button id="saveCartEditBtn" style="background:#f97316;color:white;">Save</button><button id="cancelCartEditBtn">Cancel</button></div></div>`; 
+        document.body.appendChild(modal); 
+        document.getElementById('saveCartEditBtn').onclick = async () => { 
+            const newCustomerName = document.getElementById('editCustomerName').value.trim() || "Guest"; 
+            const newPaymentMode = document.getElementById('editPaymentMode').value; 
+            const updates = {}; 
+            const newQuantities = {}, newPrices = {}; 
+            document.querySelectorAll('.edit-item-qty').forEach(inp => { newQuantities[parseInt(inp.dataset.idx)] = parseInt(inp.value); }); 
+            document.querySelectorAll('.edit-item-price').forEach(inp => { newPrices[parseInt(inp.dataset.idx)] = parseFloat(inp.value); }); 
+            for (let i = 0; i < cartObj.items.length; i++) { 
+                const item = cartObj.items[i]; 
+                const newQty = newQuantities[i], newPrice = newPrices[i]; 
+                if (isNaN(newQty) || newQty < 1 || isNaN(newPrice) || newPrice < 0) { showToast("Invalid", true); return; } 
+                updates[`/${item.id}`] = { ...allSales.find(s => s.id === item.id), quantity: newQty, unitPrice: newPrice, totalAmount: newQty * newPrice, customerName: newCustomerName, paymentMode: newPaymentMode }; 
+            } 
+            try { 
+                await salesRef.update(updates); 
+                showToast("Updated!"); 
+                document.body.removeChild(modal); 
+                await loadAllSales(); 
+            } catch (err) { showToast("Update failed: " + err.message, true); } 
+        }; 
+        document.getElementById('cancelCartEditBtn').onclick = () => document.body.removeChild(modal); 
+    }
+    
+    async function loadAllSales() { 
+        const snap = await salesRef.once('value'); 
+        const data = snap.val(); 
+        allSales = data ? Object.values(data).sort((a,b) => (b.createdAt||0) - (a.createdAt||0)) : []; 
+        updateDashboardWithFilter(); 
+        renderCartHistory(); 
+        updateGraphs(); 
+        renderDonutCharts();
+    }
+    
+    function renderCartHistory() { 
+        const carts = groupIntoCarts(); 
+        const totalPages = Math.max(1, Math.ceil(carts.length / CART_PAGE_SIZE)); 
+        if (cartHistoryPage > totalPages) cartHistoryPage = totalPages; 
+        const start = (cartHistoryPage - 1) * CART_PAGE_SIZE; 
+        const pageCarts = carts.slice(start, start + CART_PAGE_SIZE); 
+        const container = document.getElementById('cartHistoryContainer'); 
+        if (!container) return; 
+        if (pageCarts.length === 0) { container.innerHTML = '<div style="text-align:center;padding:20px;">No cart orders</div>'; document.getElementById('cartPagination').innerHTML = ''; return; } 
+        container.innerHTML = pageCarts.map(c => `<div class="cart-order-card ${c.paymentMode === 'cash' ? 'cash-bg' : (c.paymentMode === 'online' ? 'online-bg' : (c.paymentMode === 'pending' ? 'pending-bg' : 'nopayment-bg'))}"><div class="flex-between"><span><i class="fas fa-calendar"></i> ${formatDateDMY(c.date)} | ${c.time}</span><span class="badge">${c.paymentMode === 'cash' ? '💵 Cash' : (c.paymentMode === 'online' ? '💳 Online' : (c.paymentMode === 'pending' ? '⏳ Pending' : '🚫 No Payment'))}</span></div><div><i class="fas fa-user"></i> ${c.customerName}</div><div class="summary-list" style="margin-top:8px; background:white;">${c.items.map(i => `<div class="summary-item"><span>${i.name} | ${i.type} | Qty: ${i.quantity}${i.mixItems ? `<br><small>📦 ${i.mixItems}</small>` : ''}</span><span>₹${i.total}</span></div>`).join('')}</div><div class="grand-total" style="border:none;">Grand Total: ₹${c.grandTotal}</div><div class="flex-between" style="margin-top:12px;"><button class="action-btn edit-btn" data-cart-idx="${carts.indexOf(c)}"><i class="fas fa-edit"></i> Edit</button><button class="action-btn delete-btn" data-cart-idx="${carts.indexOf(c)}"><i class="fas fa-trash-alt"></i> Delete</button></div></div>`).join(''); 
+        const paginationHtml = `<button class="page-nav-btn" id="prevPageBtn" ${cartHistoryPage === 1 ? 'disabled style="opacity:0.5;"' : ''}><i class="fas fa-chevron-left"></i> Previous</button><span class="page-btn active">${cartHistoryPage} / ${totalPages}</span><button class="page-nav-btn" id="nextPageBtn" ${cartHistoryPage === totalPages ? 'disabled style="opacity:0.5;"' : ''}>Next <i class="fas fa-chevron-right"></i></button>`; 
+        document.getElementById('cartPagination').innerHTML = paginationHtml; 
+        document.getElementById('prevPageBtn')?.addEventListener('click', () => { if (cartHistoryPage > 1) { cartHistoryPage--; renderCartHistory(); } }); 
+        document.getElementById('nextPageBtn')?.addEventListener('click', () => { if (cartHistoryPage < totalPages) { cartHistoryPage++; renderCartHistory(); } }); 
+        const allCarts = carts; 
+        document.querySelectorAll('.edit-btn').forEach(btn => { btn.onclick = () => { const idx = parseInt(btn.dataset.cartIdx); editCart(allCarts[idx]); }; }); 
+        document.querySelectorAll('.delete-btn').forEach(btn => { btn.onclick = () => { const idx = parseInt(btn.dataset.cartIdx); deleteCart(allCarts[idx]); }; }); 
+    }
+    
+    function updateGraphs() { 
+        const selectedMonth = parseInt(document.getElementById('monthSelect').value); 
+        const selectedYear = parseInt(document.getElementById('yearSelect').value); 
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate(); 
+        const dailyRevenue = new Array(daysInMonth).fill(0); 
+        const dailyCounter = new Array(daysInMonth).fill(0); 
+        const dailyParcel = new Array(daysInMonth).fill(0); 
+        const heatmapData = {}; 
+        const timeSlots = ['6-7', '7-8', '8-9', '9-10', '10-11', '11-12']; 
+        for (let sale of allSales) { 
+            const saleDate = new Date(sale.date); 
+            if (saleDate.getMonth() === selectedMonth && saleDate.getFullYear() === selectedYear && sale.paymentMode !== 'pending' && sale.paymentMode !== 'nopayment') { 
+                const day = saleDate.getDate() - 1; 
+                dailyRevenue[day] += sale.totalAmount; 
+                if (sale.saleType === 'Counter Half' || sale.saleType === 'Counter Full') dailyCounter[day] += sale.quantity; 
+                else if (sale.saleType === 'Parcel Half' || sale.saleType === 'Parcel Full') dailyParcel[day] += sale.quantity; 
+                const hour = parseInt(sale.time.split(':')[0]); 
+                let slotIndex = 0; 
+                if (hour >= 6 && hour < 7) slotIndex = 0; 
+                else if (hour >= 7 && hour < 8) slotIndex = 1; 
+                else if (hour >= 8 && hour < 9) slotIndex = 2; 
+                else if (hour >= 9 && hour < 10) slotIndex = 3; 
+                else if (hour >= 10 && hour < 11) slotIndex = 4; 
+                else if (hour >= 11 && hour < 12) slotIndex = 5; 
+                const key = `${saleDate.getDate()}_${slotIndex}`; 
+                heatmapData[key] = (heatmapData[key] || 0) + sale.quantity; 
+            } 
+        } 
+        const labels = Array.from({length: daysInMonth}, (_, i) => i + 1); 
+        if (revenueChart) revenueChart.destroy(); 
+        revenueChart = new Chart(document.getElementById('revenueChart'), { type: 'line', data: { labels, datasets: [{ label: 'Revenue (₹)', data: dailyRevenue, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } }); 
+        if (combinedChart) combinedChart.destroy(); 
+        combinedChart = new Chart(document.getElementById('combinedChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Counter Count', data: dailyCounter, backgroundColor: '#f97316', borderRadius: 8 }, { label: 'Parcel Count', data: dailyParcel, backgroundColor: '#3b82f6', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Count' } }, x: { title: { display: true, text: 'Day of Month' } } } } }); 
+        let heatmapHtml = '<thead><tr><th>Day/Time</th>' + timeSlots.map(s => `<th>${s}</th>`).join('') + '</tr></thead><tbody>'; 
+        for (let day = 1; day <= daysInMonth; day++) { 
+            heatmapHtml += `<tr><td><strong>Day ${day}</strong></td>`; 
+            for (let slot = 0; slot < timeSlots.length; slot++) { 
+                const value = heatmapData[`${day}_${slot}`] || 0; 
+                let color = '#f8fafc'; 
+                if (value > 20) color = '#dc2626'; 
+                else if (value > 10) color = '#f97316'; 
+                else if (value > 5) color = '#fbbf24'; 
+                else if (value > 0) color = '#86efac'; 
+                heatmapHtml += `<td class="heatmap-cell" style="background:${color}; font-weight:${value > 0 ? 'bold' : 'normal'}">${value || '-'}</td>`; 
+            } 
+            heatmapHtml += '</tr>'; 
+        } 
+        heatmapHtml += '</tbody>'; 
+        document.getElementById('heatmapTable').innerHTML = heatmapHtml; 
+    }
+    
+    function populateYearSelect() { 
+        const currentYear = new Date().getFullYear(); 
+        const yearSelect = document.getElementById('yearSelect'); 
+        yearSelect.innerHTML = ''; 
+        for (let y = currentYear - 2; y <= currentYear + 2; y++) { 
+            const option = document.createElement('option'); 
+            option.value = y; 
+            option.textContent = y; 
+            if (y === currentYear) option.selected = true; 
+            yearSelect.appendChild(option); 
+        } 
+    }
+    
+    function populateMonthSelect() { 
+        const monthSelect = document.getElementById('monthSelect'); 
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']; 
+        monthSelect.innerHTML = ''; 
+        months.forEach((m, idx) => { 
+            const option = document.createElement('option'); 
+            option.value = idx; 
+            option.textContent = m; 
+            if (idx === new Date().getMonth()) option.selected = true; 
+            monthSelect.appendChild(option); 
+        }); 
+    }
+    
+    function applyFilter() { 
+        currentFilter = { fromDate: document.getElementById('filterFromDate').value, toDate: document.getElementById('filterToDate').value }; 
+        cartHistoryPage = 1; 
+        updateDashboardWithFilter(); 
+        renderCartHistory(); 
+    }
+    
+    function resetFilter() { 
+        const today = getTodayDate(); 
+        document.getElementById('filterFromDate').value = today; 
+        document.getElementById('filterToDate').value = today; 
+        currentFilter = { fromDate: today, toDate: today }; 
+        cartHistoryPage = 1; 
+        updateDashboardWithFilter(); 
+        renderCartHistory(); 
+    }
+    
+    // View toggle
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentView = parseInt(this.dataset.columns);
+            updateMenuStatsFromGlobal();
+        });
+    });
+    
+    // Scroll to cart button
+    const scrollBtn = document.getElementById('scrollToCartBtn');
+    const cartSection = document.getElementById('cartSection');
+    
+    function updateScrollButton() {
+        const tab1 = document.getElementById('tab1');
+        if (!tab1.classList.contains('active')) {
+            scrollBtn.classList.add('hidden');
+            return;
+        }
+        if (cart.length === 0) {
+            scrollBtn.classList.add('hidden');
+            return;
+        }
+        const rect = cartSection.getBoundingClientRect();
+        const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+        if (!isVisible) {
+            scrollBtn.classList.remove('hidden');
+        } else {
+            scrollBtn.classList.add('hidden');
+        }
+    }
+    
+    scrollBtn.addEventListener('click', () => {
+        cartSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    
+    window.addEventListener('scroll', updateScrollButton);
+    window.addEventListener('resize', updateScrollButton);
+    
+    const cartObserver = new MutationObserver(() => {
+        setTimeout(updateScrollButton, 100);
+    });
+    const cartContainer = document.getElementById('cartItemsContainer');
+    if (cartContainer) {
+        cartObserver.observe(cartContainer, { childList: true, subtree: true, characterData: true });
+    }
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => { 
+        btn.addEventListener('click', () => { 
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
+            btn.classList.add('active'); 
+            document.getElementById(btn.dataset.tab).classList.add('active'); 
+            if (btn.dataset.tab === 'tab2') renderCartHistory(); 
+            if (btn.dataset.tab === 'tab3') {
+                updateGraphs(); 
+                renderDonutCharts();
+            }
+            setTimeout(updateScrollButton, 200);
+        }); 
+    });
+    
+    document.getElementById('saveOrderBtn')?.addEventListener('click', saveOrder); 
+    document.getElementById('keepAsideBtn')?.addEventListener('click', keepAsideCurrentCart);
+    document.getElementById('applyDateFilterBtn')?.addEventListener('click', applyFilter); 
+    document.getElementById('resetFilterBtn')?.addEventListener('click', resetFilter); 
+    document.getElementById('refreshGraphsBtn')?.addEventListener('click', () => {
+        updateGraphs(); 
+        renderDonutCharts();
+    }); 
+    document.getElementById('summaryAccordionHeader')?.addEventListener('click', () => { 
+        document.getElementById('accordionContent').classList.toggle('open'); 
+        document.getElementById('accordionIcon').classList.toggle('rotated'); 
+    });
+    document.getElementById('cartSearchInput')?.addEventListener('input', (e) => { 
+        currentSearchTerm = e.target.value; 
+        cartHistoryPage = 1; 
+        renderCartHistory(); 
+    });
+    document.querySelectorAll('.payment-filter-btn').forEach(btn => { 
+        btn.addEventListener('click', () => { 
+            document.querySelectorAll('.payment-filter-btn').forEach(b => b.classList.remove('active')); 
+            btn.classList.add('active'); 
+            currentPaymentFilter = btn.dataset.filter; 
+            cartHistoryPage = 1; 
+            renderCartHistory(); 
+        }); 
+    });
+    document.getElementById('manageMenuBtn')?.addEventListener('click', openMenuManager);
+    
+    const today = getTodayDate(); 
+    document.getElementById('filterFromDate').value = today; 
+    document.getElementById('filterToDate').value = today; 
+    currentFilter = { fromDate: today, toDate: today }; 
+    populateMonthSelect(); 
+    populateYearSelect(); 
+    
+    // Load all data
+    async function initializeApp() {
+        await loadDailyMenu();
+        await loadKeptAsideFromFirebase();
+        await loadAllSales();
+        renderCart();
+        renderKeptAside();
+        updateSnackSummaryTable(getFilteredSales());
+        renderDonutCharts();
+    }
+    
+    initializeApp();
+    
+    setInterval(() => { 
+        document.getElementById('currentDateDisplay').innerHTML = `📅 ${getISTDateTime().date}`; 
+    }, 60000); 
+    document.getElementById('currentDateDisplay').innerHTML = `📅 ${getISTDateTime().date}`;
+    
+    setTimeout(updateScrollButton, 500);
+</script>
+</body>
+</html>
