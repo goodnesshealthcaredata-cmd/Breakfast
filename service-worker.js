@@ -1,4 +1,4 @@
-const CACHE_NAME = "breafast-V1";
+const CACHE_NAME = "breafast-V2";
 
 const urlsToCache = [
   "/Breakfast/",
